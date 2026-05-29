@@ -67,8 +67,9 @@ jobs:
           vcpkgGitCommitId: "c0948694cceff995e5cf90b751e0c5a95d613458"
 
       - name: Configure
+        shell: pwsh
         run: |
-          cmake -S server -B build\server-windows -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE="%VCPKG_ROOT%\scripts\buildsystems\vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-windows
+          cmake -S server -B build\server-windows -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-windows
 
       - name: Build
         run: cmake --build build\server-windows --config Release
