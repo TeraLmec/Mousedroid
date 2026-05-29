@@ -31,6 +31,16 @@ namespace InputManager
         SendInput(1, &input, sizeof(INPUT));
     }
 
+    void Windows::middle_click() const
+    {
+        INPUT input;
+        ZeroMemory(&input, sizeof(input));
+        input.type = INPUT_MOUSE;
+        input.mi.dwFlags = MOUSEEVENTF_MIDDLEDOWN | MOUSEEVENTF_MIDDLEUP;
+
+        SendInput(1, &input, sizeof(INPUT));
+    }
+
     void Windows::move(int dx, int dy) const
     {
         INPUT input = {};

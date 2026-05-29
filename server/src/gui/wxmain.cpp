@@ -2,6 +2,34 @@
 
 #include "../res/icon.xpm"
 
+#include <cctype>
+#include <iomanip>
+#include <sstream>
+
+namespace
+{
+    std::string UrlEncode(const std::string& value)
+    {
+        std::ostringstream escaped;
+        escaped.fill('0');
+        escaped << std::hex;
+
+        for (unsigned char c : value)
+        {
+            if (std::isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~')
+            {
+                escaped << c;
+            }
+            else
+            {
+                escaped << '%' << std::setw(2) << int(c);
+            }
+        }
+
+        return escaped.str();
+    }
+}
+
 wxBEGIN_EVENT_TABLE(wxMain, wxFrame)
     EVT_ICONIZE(wxMain::HideWindow)
     EVT_CHECKBOX(CHK_STARTUP, wxMain::CheckboxCmdHandler)
@@ -56,8 +84,16 @@ void wxMain::InitStatusTab()
     sb2->SetFont(wxFont(10, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD));
     r2->Add(sb2);
 
+    wxBoxSizer *r3 = new wxBoxSizer(wxVERTICAL);
+    r3->Add(new wxStaticText(tab_status, wxID_ANY, "QR pairing payload: "));
+    wxStaticText *sb3 = new wxStaticText(tab_status, HOST_PAIR_TXT, "", wxDefaultPosition, wxSize(430, -1));
+    sb3->Wrap(430);
+    sb3->SetFont(wxFont(8, wxFONTFAMILY_TELETYPE, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
+    r3->Add(sb3);
+
     ipsizer->Add(r1);
     ipsizer->Add(r2);
+    ipsizer->Add(r3, wxSizerFlags().Border(wxTOP, 8));
 
     // ==== Device list ==== 
     wxdevlist = new wxDeviceList(tab_status, wxID_ANY);
@@ -172,10 +208,13 @@ void wxMain::InitSettingsTab()
     tab_settings->SetSizerAndFit(topsizer2);
 }
 
-void wxMain::SetHostInfo(std::string _Hostname, std::string _IpAddress)
+void wxMain::SetHostInfo(std::string _Hostname, std::string _IpAddress, std::string _Port)
 {
     ((wxStaticText*)FindWindowById(HOST_NAME_TXT))->SetLabelText(_Hostname);
     ((wxStaticText*)FindWindowById(HOST_IP_TXT))->SetLabelText(_IpAddress);
+    ((wxStaticText*)FindWindowById(HOST_PAIR_TXT))->SetLabelText(
+        "mousedroid://pair?name=" + UrlEncode(_Hostname) + "&host=" + UrlEncode(_IpAddress) + "&port=" + UrlEncode(_Port)
+    );
 }
 
 void wxMain::HideWindow(wxIconizeEvent &evt)

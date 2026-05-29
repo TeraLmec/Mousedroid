@@ -20,6 +20,7 @@ namespace InputManager
         private:
             virtual void click() const override;
             virtual void right_click() const override;
+            virtual void middle_click() const override;
             virtual void move(int dx, int dy) const override;
             virtual void scroll(int dy) const override;
             virtual void scroll_h(int dx) const override;

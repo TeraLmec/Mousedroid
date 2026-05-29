@@ -22,6 +22,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import com.darusc.mousedroid.R
+import com.darusc.mousedroid.AppSettings
 import com.darusc.mousedroid.databinding.FragmentInputBinding
 import com.darusc.mousedroid.mkinput.KeyboardInputWatcher
 import com.darusc.mousedroid.networking.Connection
@@ -78,6 +79,8 @@ class Input: Fragment() {
 
         // Set navigation listener for the side drawer
         binding.navigation.setCheckedItem(R.id.mode_touchpad)
+        binding.navigation.menu.findItem(R.id.mode_volume_buttons).isChecked =
+            AppSettings.volumeButtonsControlPc(requireContext())
         binding.btnOpenDrawer.setOnClickListener {
             binding.drawerLayout.openDrawer(GravityCompat.START)
         }
@@ -93,15 +96,25 @@ class Input: Fragment() {
                     closeSoftKeyboard()
                     replaceChildFragment(Numpad())
                 }
-                R.id.mode_keyboard -> {
-                    binding.drawerLayout.closeDrawer(GravityCompat.START)
-                    openSoftKeyboard()
-                    return@setNavigationItemSelectedListener true
+                R.id.mode_presentation -> {
+                    item.isChecked = true
+                    closeSoftKeyboard()
+                    replaceChildFragment(Presentation())
+                }
+                R.id.mode_media -> {
+                    item.isChecked = true
+                    closeSoftKeyboard()
+                    replaceChildFragment(MediaRemote())
                 }
                 R.id.mode_disconnect -> {
                     closeSoftKeyboard()
                     connectionViewModel.disconnect()
                     findNavController().navigateUp()
+                }
+                R.id.mode_volume_buttons -> {
+                    item.isChecked = !item.isChecked
+                    AppSettings.setVolumeButtonsControlPc(requireContext(), item.isChecked)
+                    return@setNavigationItemSelectedListener true
                 }
                 R.id.mode_change_layout -> {
                     showLayoutSelectorDialog(item)
@@ -172,6 +185,11 @@ class Input: Fragment() {
             .commit()
     }
 
+    fun showKeyboardMode() {
+        replaceChildFragment(Keyboard())
+        openSoftKeyboard()
+    }
+
     private fun showLayoutSelectorDialog(menuItem: MenuItem) {
         val layouts = keyboardViewModel.layouts.toTypedArray()
 
@@ -213,8 +231,4 @@ class Input: Fragment() {
         view?.clearFocus()
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        connectionViewModel.disconnect()
-    }
 }

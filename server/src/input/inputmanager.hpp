@@ -29,6 +29,7 @@ namespace InputManager
     const char SCROLL_H = 0x08;
     const char ZOOM = 0x09;
     const char MEDIA = 0x0A;
+    const char MCLICK = 0x0B;
 
     extern int MOVE_SENSITIVITY;
     extern int SCROLL_SENSITIVITY;
@@ -54,6 +55,10 @@ namespace InputManager
 
                     case InputManager::RCLICK:
                         right_click();
+                        break;
+
+                    case InputManager::MCLICK:
+                        middle_click();
                         break;
 
                     case InputManager::SCROLL:
@@ -89,6 +94,7 @@ namespace InputManager
         private:
             virtual void click() const = 0;
             virtual void right_click() const = 0;
+            virtual void middle_click() const = 0;
             virtual void move(int dx, int dy) const = 0;
             virtual void scroll(int dy) const = 0;
             virtual void scroll_h(int dx) const = 0;

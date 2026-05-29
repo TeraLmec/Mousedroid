@@ -4,4 +4,7 @@
     <string name="connectionFailedWIFI">Make sure the server is open on the computer and you are on the same network.</string>
     <string name="connectionLost">Server stopped responding!</string>
     <string name="connectionFailed">Connection failed!</string>
+    <string name="disconnect">Disconnect</string>
+    <string name="notification_channel_connections">Connections</string>
+    <string name="notification_connection_title">Mousedroid is connected</string>
 </resources>

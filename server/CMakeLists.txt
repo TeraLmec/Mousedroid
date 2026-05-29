@@ -30,9 +30,16 @@ else()
     find_package(wxWidgets REQUIRED net gl core base adv)
     set(PLATFORM_SRC "src/input/linux/linuxinputmanager.cpp")
     set(PLATFORM_LIBS "")
-    
-    # Manual ASIO path for Linux
-    set(ASIO_INCLUDE_DIR "${ASIO_PATH}/include") 
+
+    find_path(ASIO_INCLUDE_DIR asio.hpp
+        PATHS
+            ${ASIO_PATH}/include
+            /usr/include
+            /usr/local/include
+    )
+    if(NOT ASIO_INCLUDE_DIR)
+        message(FATAL_ERROR "Could not find asio.hpp. Install libasio-dev or set ASIO_PATH.")
+    endif()
 endif()
 
 # Collect all sources but avoid double-including input managers
@@ -45,7 +52,10 @@ else()
     set(PLATFORM_LIBS "")
 endif()
 
-list(REMOVE_ITEM ALL_SRC ${PLATFORM_SRC})
+list(REMOVE_ITEM ALL_SRC
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/input/linux/linuxinputmanager.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/input/win32/windowsinputmanager.cpp"
+)
 
 add_executable(Mousedroid WIN32 ${ALL_SRC} ${PLATFORM_SRC})
 

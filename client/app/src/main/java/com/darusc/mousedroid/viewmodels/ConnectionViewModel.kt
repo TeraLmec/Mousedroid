@@ -7,6 +7,7 @@ import androidx.annotation.IdRes
 import androidx.annotation.RequiresApi
 import androidx.annotation.RequiresPermission
 import androidx.lifecycle.viewModelScope
+import com.darusc.mousedroid.ConnectionService
 import com.darusc.mousedroid.getDeviceDetails
 import com.darusc.mousedroid.networking.Connection
 import com.darusc.mousedroid.networking.ConnectionManager
@@ -38,6 +39,7 @@ class ConnectionViewModel :
     }
 
     private val connectionManager = ConnectionManager.getInstance(this)
+    private var appContext: Context? = null
 
     override fun onConnectionInitiated(mode: Connection.Mode) {
         if (state.value is State.Idle) {
@@ -46,6 +48,7 @@ class ConnectionViewModel :
     }
 
     override fun onConnectionSuccessful(connectionMode: Connection.Mode, hostName: String) {
+        appContext?.let { ConnectionService.start(it, connectionMode, hostName) }
         setState(State.Connected(connectionMode, hostName))
         sendEvent(Event.NavigateToInput)
     }
@@ -57,6 +60,7 @@ class ConnectionViewModel :
 
     override fun onDisconnected(connectionMode: Connection.Mode, hostName: String) {
         // Hardware link was lost (e.g host device's bluetooth was turned off)
+        appContext?.let { ConnectionService.stop(it) }
         setState(State.Idle)
         sendEvent(Event.ConnectionDisconnected(connectionMode, hostName))
         sendEvent(Event.NavigateToMain)
@@ -67,6 +71,7 @@ class ConnectionViewModel :
      */
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     fun startServerMode(context: Context) {
+        appContext = context.applicationContext
         // sendEvent(Event.NavigateToDeviceList)
         if (hasUsbConnection(context)) {
             // If app starts in server mode, check if there is a USB connection
@@ -85,6 +90,7 @@ class ConnectionViewModel :
      */
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     fun startBluetoothMode(context: Context, afterEnableIntent: Boolean = false) {
+        appContext = context.applicationContext
         if (afterEnableIntent || BluetoothAdapterWrapper.getInstance()?.isEnabled!!) {
             connectionManager.registerBluetoothHID(context)
             sendEvent(Event.NavigateToDeviceList(Connection.Mode.BLUETOOTH))
@@ -99,6 +105,7 @@ class ConnectionViewModel :
      */
     fun disconnect() {
         viewModelScope.launch {
+            appContext?.let { ConnectionService.stop(it) }
             connectionManager.disconnect()
             setState(State.Idle)
             sendEvent(Event.NavigateToMain)

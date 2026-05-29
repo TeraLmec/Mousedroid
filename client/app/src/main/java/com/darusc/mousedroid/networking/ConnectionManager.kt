@@ -54,6 +54,7 @@ class ConnectionManager private constructor() : Connection.Listener, BatteryMoni
     private val connection: Connection?
         get() = udpConn ?: tcpConn ?: btConn
 
+    @Volatile
     private var connected = false
 
     interface ConnectionStateCallback {
@@ -169,4 +170,6 @@ class ConnectionManager private constructor() : Connection.Listener, BatteryMoni
             true -> CoroutineScope(Dispatchers.IO).launch { connection?.send(event) }
         }
     }
+
+    fun isConnected(): Boolean = connected
 }

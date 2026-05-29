@@ -2,6 +2,12 @@
 
 #include "logger.h"
 
+namespace
+{
+	const std::string DISCOVERY_REQUEST = "MOUSEDROID_DISCOVER";
+	const std::string DISCOVERY_RESPONSE_PREFIX = "MOUSEDROID_SERVER";
+}
+
 Server::Server(int port, const ConnectionListener& connectionListener, SettingsManager& settings, const INPUT_MANAGER& inputmanager)
 	: settings(settings), 
 	inputmanager(inputmanager),
@@ -124,7 +130,23 @@ void Server::StartReceive()
 	udpsocket.async_receive_from(asio::buffer(byteBuffer, Connection::MAX_BUFFER_SIZE), remote_endpoint, [&](const std::error_code& ec, size_t bytesReceived) {
 		if (!ec)
 		{
-			inputmanager.execute(byteBuffer, bytesReceived);
+			std::string message(byteBuffer, bytesReceived);
+
+			if (message == DISCOVERY_REQUEST)
+			{
+				auto hostInfo = GetHostInfo();
+				std::string response = DISCOVERY_RESPONSE_PREFIX + "|" +
+					std::get<0>(hostInfo) + "|" +
+					std::get<1>(hostInfo) + "|" +
+					std::get<2>(hostInfo);
+
+				udpsocket.send_to(asio::buffer(response), remote_endpoint);
+				LOG("[SERVER] Discovery response sent to ", remote_endpoint.address().to_string(), "\n");
+			}
+			else
+			{
+				inputmanager.execute(byteBuffer, bytesReceived);
+			}
 
 			// Mechanism to synchronize the server with the client
 			// otherwise client might send the next segment of the 

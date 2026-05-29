@@ -15,7 +15,7 @@ bool wxApplication::OnInit()
     Server::HostInfo hostInfo = server->GetHostInfo();
     
     main_frame->Bind(wxEVT_CLOSE_WINDOW, &wxApplication::OnWindowCloseEvent, this);
-    main_frame->SetHostInfo(std::get<0>(hostInfo), std::get<1>(hostInfo));
+    main_frame->SetHostInfo(std::get<0>(hostInfo), std::get<1>(hostInfo), std::get<2>(hostInfo));
 
     if(!settings.GetRunAtStartup())
         main_frame->Show();

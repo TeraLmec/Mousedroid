@@ -89,6 +89,14 @@ namespace InputManager
         emit(fd, EV_SYN, SYN_REPORT, 0);
     }
 
+    void Linux::middle_click() const
+    {
+        emit(fd, EV_KEY, BTN_MIDDLE, 1);
+        emit(fd, EV_SYN, SYN_REPORT, 0);
+        emit(fd, EV_KEY, BTN_MIDDLE, 0);
+        emit(fd, EV_SYN, SYN_REPORT, 0);
+    }
+
     void Linux::move(int dx, int dy) const
     {
         emit(fd, EV_REL, REL_X, (int)(MOVE_SENSITIVITY / 10.0 * dx));

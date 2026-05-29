@@ -14,9 +14,13 @@
                     android:icon="@drawable/ic_baseline_dialpad_24"
                     android:title="Numpad" />
                 <item
-                    android:id="@+id/mode_keyboard"
-                    android:icon="@drawable/ic_baseline_keyboard_24"
-                    android:title="Keyboard" />
+                    android:id="@+id/mode_presentation"
+                    android:icon="@drawable/ic_play"
+                    android:title="Presentation" />
+                <item
+                    android:id="@+id/mode_media"
+                    android:icon="@drawable/ic_play_pause"
+                    android:title="Media Remote" />
                 <item
                     android:id="@+id/mode_change_layout"
                     android:icon="@drawable/ic_language"
@@ -28,6 +32,10 @@
 
     <item android:title="Session">1
         <menu>
+            <item
+                android:id="@+id/mode_volume_buttons"
+                android:title="Volume buttons control PC"
+                android:checkable="true" />
             <item
                 android:id="@+id/mode_disconnect"
                 android:title="Disconnect"

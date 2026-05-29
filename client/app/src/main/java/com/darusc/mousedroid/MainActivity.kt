@@ -1,8 +1,6 @@
 package com.darusc.mousedroid
 
 import android.Manifest
-import android.content.BroadcastReceiver
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -10,9 +8,12 @@ import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.provider.Settings
+import android.view.KeyEvent
 import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.darusc.mousedroid.mkinput.InputEvent
+import com.darusc.mousedroid.networking.ConnectionManager
 import com.darusc.mousedroid.networking.bluetooth.BluetoothAdapterWrapper
 
 class MainActivity : AppCompatActivity() {
@@ -58,8 +59,25 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        BatteryMonitor.getInstance().stop(applicationContext)
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        val connectionManager = ConnectionManager.getInstance()
+        if (
+            AppSettings.volumeButtonsControlPc(this) &&
+            connectionManager.isConnected() &&
+            (event.keyCode == KeyEvent.KEYCODE_VOLUME_UP || event.keyCode == KeyEvent.KEYCODE_VOLUME_DOWN)
+        ) {
+            if (event.action == KeyEvent.ACTION_DOWN) {
+                val action = if (event.keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
+                    InputEvent.MediaAction.VOLUME_UP
+                } else {
+                    InputEvent.MediaAction.VOLUME_DOWN
+                }
+                connectionManager.send(InputEvent.MediaEvent(action))
+            }
+            return true
+        }
+
+        return super.dispatchKeyEvent(event)
     }
+
 }

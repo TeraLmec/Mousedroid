@@ -1,6 +1,7 @@
 package com.darusc.mousedroid.viewmodels
 
 import com.darusc.mousedroid.layouts.KeyboardLayout
+import com.darusc.mousedroid.layouts.Keycode
 import com.darusc.mousedroid.layouts.languages.KeyboardLayoutES
 import com.darusc.mousedroid.layouts.languages.KeyboardLayoutFR
 import com.darusc.mousedroid.layouts.languages.KeyboardLayoutRO
@@ -49,5 +50,13 @@ class KeyboardViewModel : BaseViewModel<KeyboardViewModel.State, KeyboardViewMod
                 connectionManager.send(InputEvent.KeyPress(mapping))
             }
         }
+    }
+
+    fun sendKey(code: Byte, modifier: Byte = Keycode.MOD_NONE) {
+        connectionManager.send(InputEvent.KeyPress(listOf(KeyboardLayout.Key(modifier, code))))
+    }
+
+    fun sendShortcut(vararg keys: KeyboardLayout.Key) {
+        connectionManager.send(InputEvent.KeyPress(keys.toList()))
     }
 }

@@ -22,6 +22,7 @@
 
 #define HOST_NAME_TXT 1010
 #define HOST_IP_TXT 1011
+#define HOST_PAIR_TXT 1012
 
 class wxMain: public wxFrame
 {
@@ -35,7 +36,7 @@ class wxMain: public wxFrame
         wxMain(SettingsManager &_settings);
         ~wxMain();
     
-        void SetHostInfo(std::string _Hostname, std::string _IpAddress);
+        void SetHostInfo(std::string _Hostname, std::string _IpAddress, std::string _Port);
 
         void UpdateUI();
         

@@ -4,6 +4,8 @@ import android.content.Context
 import android.os.Looper
 import android.view.*
 import androidx.core.view.GestureDetectorCompat
+import com.darusc.mousedroid.layouts.KeyboardLayout
+import com.darusc.mousedroid.layouts.Keycode
 import com.darusc.mousedroid.networking.ConnectionManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -24,6 +26,8 @@ class GestureHandler(
     private val TAG = "Mousedroid"
     private val EV_DELAY_MILLIS: Long = 150
     private val SCROLL_TRESHOLD = 2.0f
+    private val MULTI_FINGER_TAP_THRESHOLD = 28.0f
+    private val MULTI_FINGER_SWIPE_THRESHOLD = 120.0f
 
     private data class State(
         var scrolling: Boolean,
@@ -31,10 +35,33 @@ class GestureHandler(
         var doublePress: Boolean,
         var lastDoublePress: Long,
         var dragging: Boolean,
-        var activeMouseWhileDragging: InputEvent.MouseButton
+        var activeMouseWhileDragging: InputEvent.MouseButton,
+        var maxPointers: Int,
+        var multiStartX: Float,
+        var multiStartY: Float,
+        var multiLastX: Float,
+        var multiLastY: Float,
+        var multiGestureConsumed: Boolean,
+        var suppressNextSingleTap: Boolean,
+        var suppressNextPointerTap: Boolean
     )
 
-    private val state = State(false, 0, false, 0, false, InputEvent.MouseButton.NONE)
+    private val state = State(
+        false,
+        0,
+        false,
+        0,
+        false,
+        InputEvent.MouseButton.NONE,
+        0,
+        0f,
+        0f,
+        0f,
+        0f,
+        false,
+        false,
+        false
+    )
 
     /**
      * Detector used for detecting scaling (pinch to zoom)
@@ -81,6 +108,11 @@ class GestureHandler(
     private val gestureDetector: GestureDetectorCompat =
         GestureDetectorCompat(context, object : GestureDetector.SimpleOnGestureListener() {
             override fun onSingleTapUp(e: MotionEvent): Boolean {
+                if (state.suppressNextSingleTap) {
+                    state.suppressNextSingleTap = false
+                    return true
+                }
+
                 // Post a runnable that sends a click event after a set delay
                 // onDoubleTap will cancel it when called
                 singleTapRunnable = Runnable {
@@ -121,6 +153,10 @@ class GestureHandler(
                 distanceX: Float,
                 distanceY: Float
             ): Boolean {
+                if (state.maxPointers >= 3 || e2.pointerCount >= 3) {
+                    return true
+                }
+
                 if ((e1?.pointerCount == 2 || e2.pointerCount == 2) || System.currentTimeMillis() - state.lastScrolled < EV_DELAY_MILLIS) {
                     if (abs(distanceX) < SCROLL_TRESHOLD && abs(distanceY) < SCROLL_TRESHOLD) {
                         return super.onScroll(e1, e2, distanceX, distanceY)
@@ -170,8 +206,40 @@ class GestureHandler(
     private var doubleTapRunnable: Runnable? = null
 
     override fun onTouch(p0: View?, p1: MotionEvent?): Boolean {
+        val event = p1 ?: return true
 
-        if (p1?.actionMasked == MotionEvent.ACTION_POINTER_UP && p1.pointerCount == 2) {
+        when (event.actionMasked) {
+            MotionEvent.ACTION_POINTER_DOWN -> {
+                if (event.pointerCount >= 2) {
+                    startMultiFingerGesture(event)
+                }
+            }
+
+            MotionEvent.ACTION_MOVE -> {
+                if (state.maxPointers >= 2 && event.pointerCount >= 2) {
+                    updateMultiFingerGesture(event)
+                }
+            }
+
+            MotionEvent.ACTION_POINTER_UP -> {
+                if (state.maxPointers >= 2 && finishMultiFingerGesture(event)) {
+                    return true
+                }
+            }
+
+            MotionEvent.ACTION_UP,
+            MotionEvent.ACTION_CANCEL -> {
+                state.suppressNextPointerTap = false
+                resetMultiFingerGesture()
+            }
+        }
+
+        if (event.actionMasked == MotionEvent.ACTION_POINTER_UP && event.pointerCount == 2) {
+            if (state.suppressNextPointerTap) {
+                state.suppressNextPointerTap = false
+                return true
+            }
+
             if (state.scrolling) {
                 // Cancel scrolling when pointer is lifted up
                 state.scrolling = false
@@ -184,7 +252,7 @@ class GestureHandler(
             }
         }
 
-        if (p1?.action == MotionEvent.ACTION_UP && state.dragging) {
+        if (event.action == MotionEvent.ACTION_UP && state.dragging) {
             // Cancel dragging
             state.scrolling = false
             state.doublePress = false
@@ -192,12 +260,12 @@ class GestureHandler(
             sendInputCallback(InputEvent.MouseDragState(InputEvent.MouseButton.LEFT, false))
         }
 
-        if (p1?.let { gestureDetector.onTouchEvent(it) } == true) {
+        if (gestureDetector.onTouchEvent(event)) {
             return true
         }
-        p1?.let { scaleDetector.onTouchEvent(it) }
+        scaleDetector.onTouchEvent(event)
 
-        when (p1?.action) {
+        when (event.action) {
             MotionEvent.ACTION_MOVE -> {
                 if (state.doublePress && System.currentTimeMillis() - state.lastDoublePress < EV_DELAY_MILLIS) {
                     // If a move event is triggered right after a double press initiate dragging
@@ -217,7 +285,7 @@ class GestureHandler(
                         )
                     )
 
-                    val cancelEvent = MotionEvent.obtain(p1)
+                    val cancelEvent = MotionEvent.obtain(event)
                     cancelEvent.action = MotionEvent.ACTION_CANCEL
                     gestureDetector.onTouchEvent(cancelEvent)
                 }
@@ -225,5 +293,119 @@ class GestureHandler(
         }
 
         return true
+    }
+
+    private fun startMultiFingerGesture(event: MotionEvent) {
+        val center = getPointerCenter(event)
+
+        if (state.maxPointers < 2 || event.pointerCount > state.maxPointers) {
+            state.multiStartX = center.first
+            state.multiStartY = center.second
+        }
+
+        state.maxPointers = maxOf(state.maxPointers, event.pointerCount)
+        state.multiLastX = center.first
+        state.multiLastY = center.second
+        state.multiGestureConsumed = false
+    }
+
+    private fun updateMultiFingerGesture(event: MotionEvent) {
+        val center = getPointerCenter(event)
+        state.multiLastX = center.first
+        state.multiLastY = center.second
+    }
+
+    private fun finishMultiFingerGesture(event: MotionEvent): Boolean {
+        if (state.multiGestureConsumed) {
+            resetMultiFingerGesture()
+            return true
+        }
+
+        updateMultiFingerGesture(event)
+
+        val dx = state.multiLastX - state.multiStartX
+        val dy = state.multiLastY - state.multiStartY
+        val absDx = abs(dx)
+        val absDy = abs(dy)
+
+        val consumed = when {
+            state.maxPointers >= 3 && absDx < MULTI_FINGER_TAP_THRESHOLD && absDy < MULTI_FINGER_TAP_THRESHOLD -> {
+                sendInputCallback(InputEvent.MouseClick(InputEvent.MouseButton.MIDDLE))
+                true
+            }
+
+            state.maxPointers >= 3 && absDx > MULTI_FINGER_SWIPE_THRESHOLD && absDx > absDy -> {
+                if (dx < 0) {
+                    sendShortcut(Keycode.KEY_TAB, combinedModifier(Keycode.MOD_LEFT_ALT, Keycode.MOD_LEFT_SHIFT))
+                } else {
+                    sendShortcut(Keycode.KEY_TAB, Keycode.MOD_LEFT_ALT)
+                }
+                true
+            }
+
+            state.maxPointers >= 3 && absDy > MULTI_FINGER_SWIPE_THRESHOLD && absDy > absDx -> {
+                if (dy < 0) {
+                    sendShortcut(Keycode.KEY_TAB, Keycode.MOD_LEFT_GUI)
+                } else {
+                    sendShortcut(Keycode.KEY_D, Keycode.MOD_LEFT_GUI)
+                }
+                true
+            }
+
+            state.maxPointers == 2 && absDx > MULTI_FINGER_SWIPE_THRESHOLD && absDx > absDy * 1.4f -> {
+                sendShortcut(
+                    if (dx < 0) Keycode.KEY_LEFT else Keycode.KEY_RIGHT,
+                    Keycode.MOD_LEFT_ALT
+                )
+                true
+            }
+
+            else -> false
+        }
+
+        if (consumed) {
+            singleTapRunnable?.let { handler.removeCallbacks(it) }
+            doubleTapRunnable?.let { handler.removeCallbacks(it) }
+            state.scrolling = false
+            state.suppressNextSingleTap = true
+            state.suppressNextPointerTap = true
+            state.multiGestureConsumed = true
+        }
+
+        resetMultiFingerGesture()
+        return consumed
+    }
+
+    private fun resetMultiFingerGesture() {
+        state.maxPointers = 0
+        state.multiStartX = 0f
+        state.multiStartY = 0f
+        state.multiLastX = 0f
+        state.multiLastY = 0f
+        state.multiGestureConsumed = false
+    }
+
+    private fun getPointerCenter(event: MotionEvent): Pair<Float, Float> {
+        var x = 0f
+        var y = 0f
+
+        for (index in 0 until event.pointerCount) {
+            x += event.getX(index)
+            y += event.getY(index)
+        }
+
+        return Pair(x / event.pointerCount, y / event.pointerCount)
+    }
+
+    private fun sendShortcut(keycode: Byte, modifier: Byte) {
+        sendInputCallback(
+            InputEvent.KeyPress(
+                listOf(KeyboardLayout.Key(modifier, keycode))
+            )
+        )
+    }
+
+    private fun combinedModifier(vararg modifiers: Byte): Byte {
+        return modifiers.fold(0) { acc, modifier -> acc or (modifier.toInt() and 0xFF) }.toByte()
     }
 }

@@ -1,9 +1,11 @@
 package com.darusc.mousedroid.fragments
 
 import android.Manifest
+import android.app.Activity
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothClass.Device
 import android.content.Context
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.view.Gravity
@@ -13,6 +15,8 @@ import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.PopupWindow
 import android.widget.TextView
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.annotation.RequiresPermission
 import androidx.constraintlayout.widget.ConstraintLayout
@@ -43,6 +47,20 @@ class DeviceList : Fragment() {
     private lateinit var loadingPopup: PopupWindow
 
     private lateinit var deviceAdapter: DeviceAdapter
+
+    private val scanQrLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            val payload = it.data?.getStringExtra("SCAN_RESULT")
+            if (it.resultCode == Activity.RESULT_OK && payload != null) {
+                if (deviceListViewModel.addPairingPayload(payload)) {
+                    Toast.makeText(context, "Paired server added.", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(context, "Invalid Mousedroid pairing code.", Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                showQrPayloadDialog()
+            }
+        }
 
     private val connectionMode: Connection.Mode
         get() = arguments?.getSerializable("CONNECTION_MODE") as Connection.Mode
@@ -103,7 +121,12 @@ class DeviceList : Fragment() {
         // was created to display wifi devices otherwise keep it hidden
         if(connectionMode == Connection.Mode.WIFI) {
             binding.btnAddDevice.setOnClickListener { showAddDeviceDialog() }
+            binding.btnRefreshDiscovery.setOnClickListener { deviceListViewModel.refreshDiscovery() }
+            binding.btnPairQr.setOnClickListener { startQrPairing() }
             binding.btnAddDevice.visibility = View.VISIBLE
+            binding.btnRefreshDiscovery.visibility = View.VISIBLE
+            binding.btnPairQr.visibility = View.VISIBLE
+            deviceListViewModel.refreshDiscovery()
         }
 
         viewLifecycleOwner.lifecycleScope.launch {
@@ -197,6 +220,57 @@ class DeviceList : Fragment() {
         }
 
         // !!!
+        popup.softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
+        popup.showAtLocation(pView, Gravity.BOTTOM, 0, 0)
+        popup.dim(0.6f)
+    }
+
+    private fun startQrPairing() {
+        val intent = Intent("com.google.zxing.client.android.SCAN").apply {
+            putExtra("SCAN_MODE", "QR_CODE_MODE")
+        }
+
+        try {
+            scanQrLauncher.launch(intent)
+        } catch (_: Exception) {
+            showQrPayloadDialog()
+        }
+    }
+
+    private fun showQrPayloadDialog() {
+        val pView = layoutInflater.inflate(R.layout.device_add_fragment, null)
+        val popup = PopupWindow(
+            pView,
+            ConstraintLayout.LayoutParams.MATCH_PARENT,
+            ConstraintLayout.LayoutParams.WRAP_CONTENT,
+            true
+        )
+
+        val payload: TextInputEditText = pView.findViewById(R.id.textAddress)
+        val name: TextInputEditText = pView.findViewById(R.id.textName)
+        val deviceAddBtn: MaterialButton = pView.findViewById(R.id.deviceAddConfirm)
+
+        pView.findViewById<TextView>(R.id.textView).text = "QR Pairing"
+        payload.hint = "mousedroid://pair?name=..."
+        name.visibility = View.GONE
+        pView.findViewById<View>(R.id.textInputLayout).visibility = View.GONE
+
+        payload.addTextChangedListener {
+            deviceAddBtn.isEnabled = it?.toString()?.let { text ->
+                com.darusc.mousedroid.networking.ServerDiscovery.parsePairingPayload(text) != null
+            } ?: false
+        }
+
+        deviceAddBtn.setOnClickListener {
+            if (deviceListViewModel.addPairingPayload(payload.text.toString())) {
+                popup.dismiss()
+            }
+        }
+
+        pView.findViewById<MaterialButton>(R.id.cancelAdd).setOnClickListener {
+            popup.dismiss()
+        }
+
         popup.softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
         popup.showAtLocation(pView, Gravity.BOTTOM, 0, 0)
         popup.dim(0.6f)

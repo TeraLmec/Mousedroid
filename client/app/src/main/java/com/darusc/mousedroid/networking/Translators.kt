@@ -33,6 +33,7 @@ private object RawSocketEvents {
     const val SCROLL_H: Byte = 0x08
     const val ZOOM: Byte = 0x09
     const val MEDIA: Byte = 0x0A
+    const val MCLICK: Byte = 0x0B
 }
 
 private fun getMouseButtonHIDCode(button: InputEvent.MouseButton): Byte {
@@ -171,8 +172,12 @@ fun InputEvent.toSocketReport(): Array<ByteArray> {
         }
 
         is InputEvent.MouseClick -> {
-            val code =
-                if (this.button == InputEvent.MouseButton.LEFT) RawSocketEvents.LCLICK else RawSocketEvents.RCLICK
+            val code = when (this.button) {
+                InputEvent.MouseButton.LEFT -> RawSocketEvents.LCLICK
+                InputEvent.MouseButton.RIGHT -> RawSocketEvents.RCLICK
+                InputEvent.MouseButton.MIDDLE -> RawSocketEvents.MCLICK
+                InputEvent.MouseButton.NONE -> return emptyArray()
+            }
             socketReport(code)
         }
 

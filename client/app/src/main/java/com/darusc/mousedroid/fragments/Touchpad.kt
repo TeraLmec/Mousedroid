@@ -44,6 +44,10 @@ class Touchpad : Fragment() {
         }
         binding.touchpadSensor.setOnTouchListener(gestureHandler)
 
+        binding.btnKeyboard.setOnClickListener {
+            (parentFragment as? Input)?.showKeyboardMode()
+        }
+
         // Multimedia dropdown
         binding.btnToggleMedia.setOnClickListener {
             TransitionManager.beginDelayedTransition(binding.root as ViewGroup)
@@ -96,6 +100,7 @@ class Touchpad : Fragment() {
 
             // Remove all other buttons
             binding.title.visibility = View.GONE
+            binding.btnKeyboard.visibility = View.GONE
             binding.mouseButtonsRow.visibility = View.GONE
             binding.btnToggleMedia.visibility = View.GONE
             binding.mediaControls.visibility = View.GONE
@@ -113,6 +118,7 @@ class Touchpad : Fragment() {
 
             // Make everything else visible again
             binding.title.visibility = View.VISIBLE
+            binding.btnKeyboard.visibility = View.VISIBLE
             binding.mouseButtonsRow.visibility = View.VISIBLE
             binding.btnToggleMedia.visibility = View.VISIBLE
             binding.mediaControls.visibility = View.VISIBLE
