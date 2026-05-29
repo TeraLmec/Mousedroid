@@ -75,28 +75,34 @@ jobs:
         run: cmake --build build\server-windows --config Release
 
       - name: Package Windows server
-        shell: bash
+        shell: pwsh
         run: |
-          set -euo pipefail
-          mkdir -p release/server-windows
-          cp "build/server-windows/bin/Release/Mousedroid.exe" release/server-windows/ || cp "build/server-windows/bin/Mousedroid.exe" release/server-windows/
-          if [[ -d "vcpkg_installed/x64-windows/bin" ]]; then
-            cp vcpkg_installed/x64-windows/bin/*.dll release/server-windows/ || true
-          fi
-          if [[ -d "server/adb" ]]; then
-            cp -a server/adb release/server-windows/
-          fi
-          if [[ -f "server/app.ico" ]]; then
-            cp -a server/app.ico release/server-windows/
-          fi
-          cat > release/server-windows/config.ini <<CONFIG
+          New-Item -ItemType Directory -Force -Path release/server-windows | Out-Null
+          if (Test-Path "build/server-windows/bin/Release/Mousedroid.exe") {
+            Copy-Item "build/server-windows/bin/Release/Mousedroid.exe" -Destination release/server-windows/
+          } else {
+            Copy-Item "build/server-windows/bin/Mousedroid.exe" -Destination release/server-windows/
+          }
+          if (Test-Path "vcpkg_installed/x64-windows/bin") {
+            Get-ChildItem "vcpkg_installed/x64-windows/bin" -Filter "*.dll" | Copy-Item -Destination release/server-windows/ -ErrorAction SilentlyContinue
+          }
+          if (Test-Path "server/adb") {
+            Copy-Item "server/adb" -Destination release/server-windows/ -Recurse
+          }
+          if (Test-Path "server/app.ico") {
+            Copy-Item "server/app.ico" -Destination release/server-windows/
+          }
+          @"
           MINIMIZE_TASKBAR=0
           MOVE_SENSITIVITY=10
           RUN_STARTUP=0
           SCROLL_SENSITIVITY=3
-          CONFIG
-          mkdir -p release/packages
-          (cd release && zip -qr "packages/Mousedroid-server-windows-release.zip" "server-windows")
+          "@ | Set-Content -Path release/server-windows/config.ini
+          New-Item -ItemType Directory -Force -Path release/packages | Out-Null
+          if (Test-Path "release/packages/Mousedroid-server-windows-release.zip") {
+            Remove-Item "release/packages/Mousedroid-server-windows-release.zip"
+          }
+          Compress-Archive -Path release/server-windows -DestinationPath release/packages/Mousedroid-server-windows-release.zip
 
       - name: Upload workflow artifacts
         uses: actions/upload-artifact@v4
