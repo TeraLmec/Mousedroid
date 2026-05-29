@@ -15,7 +15,6 @@ jobs:
   linux-android:
     name: Build Linux server and Android APK
     runs-on: ubuntu-24.04
-    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
 
     steps:
       - name: Checkout
