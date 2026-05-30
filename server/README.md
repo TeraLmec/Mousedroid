@@ -33,9 +33,14 @@ Mousedroid uses a cross-platform CMake build system. Follow the instructions bel
     * Set the configuration dropdown to **x64-Release**.
     * Go to **Build > Build All**.
 
-3.  **Deploy** Run the deployment script to collect the executable and its dependencies into the `mousedroid_win64/` folder:
+3.  **Deploy** Run the deployment script to collect the executable and its assets into the `mousedroid_win64/` folder:
     ```powershell
     ./release.bat
+    ```
+
+4.  **Copy vcpkg DLLs** If the app fails to launch due to missing DLLs, copy them into the same folder:
+    ```powershell
+    ./install.bat
     ```
 
 

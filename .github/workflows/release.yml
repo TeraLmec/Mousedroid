@@ -76,32 +76,35 @@ jobs:
       - name: Package Windows server
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force -Path release/server-windows | Out-Null
+          New-Item -ItemType Directory -Force -Path release/mousedroid_win64 | Out-Null
           if (Test-Path "build/server-windows/bin/Release/Mousedroid.exe") {
-            Copy-Item "build/server-windows/bin/Release/Mousedroid.exe" -Destination release/server-windows/
+            Copy-Item "build/server-windows/bin/Release/Mousedroid.exe" -Destination release/mousedroid_win64/
           } else {
-            Copy-Item "build/server-windows/bin/Mousedroid.exe" -Destination release/server-windows/
+            Copy-Item "build/server-windows/bin/Mousedroid.exe" -Destination release/mousedroid_win64/
           }
           if (Test-Path "vcpkg_installed/x64-windows/bin") {
-            Get-ChildItem "vcpkg_installed/x64-windows/bin" -Filter "*.dll" | Copy-Item -Destination release/server-windows/ -ErrorAction SilentlyContinue
+            Get-ChildItem "vcpkg_installed/x64-windows/bin" -Filter "*.dll" | Copy-Item -Destination release/mousedroid_win64/ -ErrorAction SilentlyContinue
           }
           if (Test-Path "server/adb") {
-            Copy-Item "server/adb" -Destination release/server-windows/ -Recurse
+            Copy-Item "server/adb" -Destination release/mousedroid_win64/ -Recurse
           }
           if (Test-Path "server/app.ico") {
-            Copy-Item "server/app.ico" -Destination release/server-windows/
+            Copy-Item "server/app.ico" -Destination release/mousedroid_win64/
+          }
+          if (Test-Path "server/icon.png") {
+            Copy-Item "server/icon.png" -Destination release/mousedroid_win64/
           }
           @"
           MINIMIZE_TASKBAR=0
           MOVE_SENSITIVITY=10
           RUN_STARTUP=0
           SCROLL_SENSITIVITY=3
-          "@ | Set-Content -Path release/server-windows/config.ini
+          "@ | Set-Content -Path release/mousedroid_win64/config.ini
           New-Item -ItemType Directory -Force -Path release/packages | Out-Null
           if (Test-Path "release/packages/Mousedroid-server-windows-release.zip") {
             Remove-Item "release/packages/Mousedroid-server-windows-release.zip"
           }
-          Compress-Archive -Path release/server-windows -DestinationPath release/packages/Mousedroid-server-windows-release.zip
+          Compress-Archive -Path release/mousedroid_win64 -DestinationPath release/packages/Mousedroid-server-windows-release.zip
 
       - name: Upload workflow artifacts
         uses: actions/upload-artifact@v4

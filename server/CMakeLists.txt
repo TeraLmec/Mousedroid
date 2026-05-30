@@ -20,9 +20,9 @@ if(WIN32)
     
     # MSVC vs MinGW resource handling
     if(MSVC)
-        set(PLATFORM_SRC "src/input/win32/windowsinputmanager.cpp" resource.rc)
+        set(PLATFORM_SRC "src/input/win32/windowsinputmanager.cpp" "res/resource.rc")
     else()
-        set(PLATFORM_SRC "src/input/win32/windowsinputmanager.cpp" resource.o)
+        set(PLATFORM_SRC "src/input/win32/windowsinputmanager.cpp" "res/resource.rc")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,-subsystem,windows")
     endif()
 else()
@@ -44,13 +44,6 @@ endif()
 
 # Collect all sources but avoid double-including input managers
 file(GLOB_RECURSE ALL_SRC src/*.cpp)
-
-if(WIN32)
-    set(PLATFORM_SRC "src/input/win32/windowsinputmanager.cpp")
-else()
-    set(PLATFORM_SRC "src/input/linux/linuxinputmanager.cpp")
-    set(PLATFORM_LIBS "")
-endif()
 
 list(REMOVE_ITEM ALL_SRC
     "${CMAKE_CURRENT_SOURCE_DIR}/src/input/linux/linuxinputmanager.cpp"
