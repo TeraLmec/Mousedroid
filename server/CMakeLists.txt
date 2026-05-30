@@ -13,7 +13,34 @@ if(WIN32)
     # On Windows, vcpkg handles wxWidgets and Asio automatically.
     # find_package(asio CONFIG) is the vcpkg standard for Asio.
     find_package(asio CONFIG REQUIRED)
-    find_package(wxWidgets REQUIRED net gl core base adv)
+
+    if(MINGW)
+        find_program(wxWidgets_CONFIG_EXECUTABLE
+            NAMES msw-unicode-3.3 wx-config
+            PATHS "${CMAKE_BINARY_DIR}/vcpkg_installed/${VCPKG_TARGET_TRIPLET}/lib/wx/config"
+            NO_DEFAULT_PATH
+        )
+        if(NOT wxWidgets_CONFIG_EXECUTABLE)
+            message(FATAL_ERROR "Could not find vcpkg wx-config for MinGW.")
+        endif()
+
+        execute_process(
+            COMMAND "${wxWidgets_CONFIG_EXECUTABLE}" --cppflags
+            OUTPUT_VARIABLE wxWidgets_CPPFLAGS
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            COMMAND_ERROR_IS_FATAL ANY
+        )
+        execute_process(
+            COMMAND "${wxWidgets_CONFIG_EXECUTABLE}" --libs net,gl,core,base,adv
+            OUTPUT_VARIABLE wxWidgets_LIBS
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            COMMAND_ERROR_IS_FATAL ANY
+        )
+        separate_arguments(wxWidgets_CPPFLAGS NATIVE_COMMAND "${wxWidgets_CPPFLAGS}")
+        separate_arguments(wxWidgets_LIBS NATIVE_COMMAND "${wxWidgets_LIBS}")
+    else()
+        find_package(wxWidgets REQUIRED net gl core base adv)
+    endif()
     
     # Define Windows-specific libraries (added user32 for SendInput)
     set(PLATFORM_LIBS ws2_32 wsock32 user32)
@@ -54,7 +81,11 @@ add_executable(Mousedroid WIN32 ${ALL_SRC} ${PLATFORM_SRC})
 
 
 
-if(wxWidgets_FOUND)
+if(MINGW)
+    target_compile_options(Mousedroid PRIVATE ${wxWidgets_CPPFLAGS})
+    target_compile_definitions(Mousedroid PRIVATE UNICODE _UNICODE)
+    target_link_libraries(Mousedroid PRIVATE ${wxWidgets_LIBS})
+elseif(wxWidgets_FOUND)
     include(${wxWidgets_USE_FILE})
     target_link_libraries(Mousedroid PRIVATE ${wxWidgets_LIBRARIES})
 endif()

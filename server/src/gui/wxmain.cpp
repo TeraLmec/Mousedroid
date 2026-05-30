@@ -1,6 +1,7 @@
 #include "wxmain.h"
 
 #include "../res/icon.xpm"
+#include "gui/qrcode.h"
 
 #include <cctype>
 #include <iomanip>
@@ -27,6 +28,34 @@ namespace
         }
 
         return escaped.str();
+    }
+
+    wxBitmap MakeQrBitmap(const std::string& payload, int scale = 4, int quietZone = 4)
+    {
+        const QrCode qr = QrCode::EncodeText(payload);
+        const int modules = qr.Size();
+        const int bitmapSize = (modules + quietZone * 2) * scale;
+
+        wxBitmap bitmap(bitmapSize, bitmapSize, 24);
+        wxMemoryDC dc(bitmap);
+        dc.SetBackground(*wxWHITE_BRUSH);
+        dc.Clear();
+        dc.SetBrush(*wxBLACK_BRUSH);
+        dc.SetPen(*wxTRANSPARENT_PEN);
+
+        for (int y = 0; y < modules; ++y)
+        {
+            for (int x = 0; x < modules; ++x)
+            {
+                if (qr.GetModule(x, y))
+                {
+                    dc.DrawRectangle((x + quietZone) * scale, (y + quietZone) * scale, scale, scale);
+                }
+            }
+        }
+
+        dc.SelectObject(wxNullBitmap);
+        return bitmap;
     }
 }
 
@@ -85,7 +114,9 @@ void wxMain::InitStatusTab()
     r2->Add(sb2);
 
     wxBoxSizer *r3 = new wxBoxSizer(wxVERTICAL);
-    r3->Add(new wxStaticText(tab_status, wxID_ANY, "QR pairing payload: "));
+    r3->Add(new wxStaticText(tab_status, wxID_ANY, "QR pairing: "));
+    pairingQr = new wxStaticBitmap(tab_status, wxID_ANY, wxBitmap(180, 180));
+    r3->Add(pairingQr, wxSizerFlags().Border(wxTOP | wxBOTTOM, 4));
     wxStaticText *sb3 = new wxStaticText(tab_status, HOST_PAIR_TXT, "", wxDefaultPosition, wxSize(430, -1));
     sb3->Wrap(430);
     sb3->SetFont(wxFont(8, wxFONTFAMILY_TELETYPE, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
@@ -210,11 +241,17 @@ void wxMain::InitSettingsTab()
 
 void wxMain::SetHostInfo(std::string _Hostname, std::string _IpAddress, std::string _Port)
 {
+    const std::string payload = "mousedroid://pair?host=" + UrlEncode(_IpAddress) + "&port=" + UrlEncode(_Port);
+
     ((wxStaticText*)FindWindowById(HOST_NAME_TXT))->SetLabelText(_Hostname);
     ((wxStaticText*)FindWindowById(HOST_IP_TXT))->SetLabelText(_IpAddress);
-    ((wxStaticText*)FindWindowById(HOST_PAIR_TXT))->SetLabelText(
-        "mousedroid://pair?name=" + UrlEncode(_Hostname) + "&host=" + UrlEncode(_IpAddress) + "&port=" + UrlEncode(_Port)
-    );
+    ((wxStaticText*)FindWindowById(HOST_PAIR_TXT))->SetLabelText(payload);
+
+    if (pairingQr != nullptr)
+    {
+        pairingQr->SetBitmap(MakeQrBitmap(payload));
+        tab_status->Layout();
+    }
 }
 
 void wxMain::HideWindow(wxIconizeEvent &evt)

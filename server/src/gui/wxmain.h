@@ -9,6 +9,7 @@
 #include <wx/notebook.h>
 #include <wx/msgdlg.h>
 #include <wx/hyperlink.h>
+#include <wx/statbmp.h>
 
 #include "gui/wxdevicelist.h"
 #include "settingsmanager.h"
@@ -45,6 +46,7 @@ class wxMain: public wxFrame
         wxPanel *tab_settings = nullptr;
         wxNotebook *wxnotebook = nullptr;
         wxMTaskbar *tb = nullptr;
+        wxStaticBitmap *pairingQr = nullptr;
         
         wxDECLARE_EVENT_TABLE();    
 

@@ -9,11 +9,14 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.provider.Settings
 import android.view.KeyEvent
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.edit
 import com.darusc.mousedroid.mkinput.InputEvent
 import com.darusc.mousedroid.networking.ConnectionManager
+import com.darusc.mousedroid.networking.ServerDiscovery
 import com.darusc.mousedroid.networking.bluetooth.BluetoothAdapterWrapper
 
 class MainActivity : AppCompatActivity() {
@@ -31,7 +34,24 @@ class MainActivity : AppCompatActivity() {
         }
 
         BluetoothAdapterWrapper.initialize(applicationContext)
+        handlePairingIntent(intent)
         //BatteryMonitor.getInstance().start(applicationContext)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handlePairingIntent(intent)
+    }
+
+    private fun handlePairingIntent(intent: Intent?) {
+        val payload = intent?.dataString ?: return
+        val server = ServerDiscovery.parsePairingPayload(payload) ?: return
+
+        getSharedPreferences("devices", MODE_PRIVATE).edit {
+            putString(server.name, server.address)
+        }
+        Toast.makeText(this, "Paired ${server.name}", Toast.LENGTH_SHORT).show()
     }
 
     override fun onRequestPermissionsResult(
